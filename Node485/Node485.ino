@@ -12,6 +12,7 @@
 #include "ESP8266HTTPClient.h"
 
 #include <ThingSpeak.h>
+#include <SoftwareSerial.h>
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "id.pool.ntp.org", 3600*7, 60000);
@@ -19,6 +20,15 @@ WiFiClient  client;
 
 unsigned long t0,tnow;
 unsigned long interval;
+
+#define RS485Transmit    HIGH
+#define RS485Receive     LOW
+#define RS485Control D3
+
+#define RS485DI D0
+#define RS485RO D1
+
+SoftwareSerial mySerial(RS485RO, RS485DI);
 
 #define CH_ID 213899           //Test channel for counting
 #define READ_API "445L8T100BVZ2D1H" //API Key for Test channel
@@ -31,7 +41,10 @@ void initWifiManager() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  mySerial.begin(9600);
+  
+  pinMode(RS485Control,OUTPUT);
 
   initWifiManager();
 
@@ -46,10 +59,13 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   if(cekInterval(15)){ //run every n second
-    Serial.print("loop");
-    getThingSpeakData();
+    Serial.println("loop");
+    int dec = getThingSpeakData();
+    transmitMode();
+    mySerial.print(String(dec)+"#");
+  }else{
+    recieveMode();
   }
-
 }
 
 int getThingSpeakData(){
@@ -77,4 +93,14 @@ bool cekInterval(int interval){
   }else{
     return false;
   }
+}
+
+void transmitMode(){
+  digitalWrite(RS485Control,RS485Transmit);
+  delay(10);
+}
+
+void recieveMode(){
+  digitalWrite(RS485Control,RS485Receive);
+  delay(10);
 }
